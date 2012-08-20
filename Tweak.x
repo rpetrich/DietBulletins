@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <CaptainHook/CaptainHook.h>
+#import <QuartzCore/QuartzCore.h>
 
 %config(generator=internal);
 
@@ -37,6 +38,7 @@
 {
 	if ((self = %orig())) {
 		[self setBackgroundColor:[UIColor whiteColor]];
+		[[self layer] setCornerRadius:3.5f];
 	}
 	return self;
 }
