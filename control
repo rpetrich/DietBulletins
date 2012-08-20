@@ -1,0 +1,9 @@
+Package: com.rpetrich.dietbulletin
+Priority: optional
+Section: Tweaks
+Architecture: iphoneos-arm
+Version: 0.1
+Description: Skinny bulletins!
+Name: DietBulletin
+Depends: firmware (>= 4.0), mobilesubstrate
+Author: Ryan Petrich
