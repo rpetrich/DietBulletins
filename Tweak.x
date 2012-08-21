@@ -2,6 +2,11 @@
 #import <CaptainHook/CaptainHook.h>
 #import <QuartzCore/QuartzCore.h>
 
+@interface UILabel (Marquee)
+- (void)setMarqueeEnabled:(BOOL)marqueeEnabled;
+- (void)setMarqueeRunning:(BOOL)marqueeRunning;
+@end
+
 %config(generator=internal);
 
 %hook SBBulletinBannerController
@@ -61,6 +66,10 @@
 		CGSize firstLabelSize = [*_titleLabel sizeThatFits:bounds.size];
 		[*_titleLabel setFrame:(CGRect){ { 24.0f, 0.0f }, { firstLabelSize.width, 21.0f } }];
 		[*_messageLabel setFrame:(CGRect){ { firstLabelSize.width + 28.0f, 1.5f }, { bounds.size.width - firstLabelSize.width - 30.0f, 21.0f } }];
+		if ([UILabel instancesRespondToSelector:@selector(setMarqueeEnabled:)] && [UILabel instancesRespondToSelector:@selector(setMarqueeRunning:)]) {
+			[*_messageLabel setMarqueeEnabled:YES];
+			[*_messageLabel setMarqueeRunning:YES];
+		}
 		[*_underlayView setHidden:YES];
 	}
 }
