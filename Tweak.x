@@ -43,7 +43,9 @@
 {
 	if ((self = %orig())) {
 		[self setBackgroundColor:[UIColor whiteColor]];
-		[[self layer] setCornerRadius:3.5f];
+		CALayer *layer = [self layer];
+		[layer setCornerRadius:3.5f];
+		[layer setContents:(id)[UIImage imageNamed:@"BannerGradientMiddle"].CGImage];
 	}
 	return self;
 }
