@@ -339,5 +339,9 @@ static inline DBTextRanges DBTextExtractLeadingCapitals(NSString *message)
 	DBRegisterTextExtractor(@"com.path.Path", ^(NSString *message){
 		return DBTextExtractLeadingCapitals(message);
 	});
+	// Quora
+	DBRegisterTextExtractor(@"com.quora.app.mobile", ^(NSString *message){
+		return DBTextExtractLeadingCapitals(message);
+	});
 	[pool drain];
 }
