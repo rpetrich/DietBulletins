@@ -1,0 +1,32 @@
+entry = {
+  bundle = AppList;
+  cell = PSLinkCell;
+  icon = "/Applications/Preferences.app/notifications_icon.png";
+  isController = 1;
+  label = DietBulletin;
+  ALSettingsPath = "/var/mobile/Library/Preferences/com.rpetrich.dietbulletin.plist";
+  ALSettingsKeyPrefix = "DBShowTitle-";
+  ALChangeNotification = "com.rpetrich.dietbulletin.settingschanged";
+  ALSettingsDefaultValue = 1;
+  ALSectionDescriptors = (
+    {
+      items = ();
+      "footer-title" = "Select which apps show titles in their bulletins";
+    },
+  	{
+  	  title = "System Applications";
+  	  predicate = "isSystemApplication = TRUE AND isWebApplication = FALSE";
+  	  "cell-class-name" = "ALSwitchCell";
+  	  "icon-size" = 29;
+  	  "suppress-hidden-apps" = 1;
+  	},
+  	{
+  	  title = "User Applications";
+  	  predicate = "isSystemApplication = FALSE AND isWebApplication = FALSE";
+  	  "cell-class-name" = "ALSwitchCell";
+  	  "icon-size" = 29;
+  	  "suppress-hidden-apps" = 1;
+  	  "footer-title" = "© 2012 Ryan Petrich";
+  	}
+  );
+};
