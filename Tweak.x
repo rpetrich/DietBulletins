@@ -98,13 +98,19 @@
 @interface UILabel (Marquee)
 - (void)setMarqueeEnabled:(BOOL)marqueeEnabled;
 - (void)setMarqueeRunning:(BOOL)marqueeRunning;
+- (void)_startMarquee;
+@end
+
+@interface SBBulletinBannerController : NSObject
++ (SBBulletinBannerController *)sharedInstance;
+- (CGRect)_currentBannerFrameForOrientation:(UIInterfaceOrientation)orientation;
 @end
 
 %config(generator=internal);
 
 %hook SBBulletinBannerController
 
-- (CGRect)_currentBannerFrameForOrientation:(int)orientation
+- (CGRect)_currentBannerFrameForOrientation:(UIInterfaceOrientation)orientation
 {
 	CGRect result = %orig();
 	result.size.height -= 18.0f;
@@ -156,6 +162,43 @@ static BOOL DBShouldShowTitleForDisplayIdentifier(NSString *displayIdentifier)
 	return !value || [value boolValue];
 }
 
+__attribute__((visibilty("hidden")))
+@interface DietBulletinMarqueeLabel : UILabel
+@end
+
+@implementation DietBulletinMarqueeLabel
+
+- (void)_startMarquee
+{
+	[super _startMarquee];
+	// Find the imageview subview that has the animation on it
+	NSArray *subviews = [self subviews];
+	if ([subviews count]) {
+		CALayer *layer = [[subviews objectAtIndex:0] layer];
+		NSArray *animationKeys = [layer animationKeys];
+		if ([animationKeys count]) {
+			// And suck out the animation's duration
+			NSTimeInterval duration = [layer animationForKey:[animationKeys objectAtIndex:0]].duration;
+			// Make the banner stay on screen at least that long
+			if (duration > 2.5) {
+				SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
+				NSArray *modes = [[NSArray alloc] initWithObjects:NSRunLoopCommonModes, nil];
+				[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_replaceIntervalElapsed) object:nil];
+				[bc performSelector:@selector(_replaceIntervalElapsed) withObject:nil afterDelay:duration inModes:modes];
+				if (duration > 6.5) {
+					[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
+					[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration inModes:modes];
+				}
+				[modes release];
+			}
+		}
+	}
+	// We've got all we need
+	object_setClass(self, [UILabel class]);
+}
+
+@end
+
 - (void)layoutSubviews
 {
 	%orig();
@@ -178,6 +221,8 @@ static BOOL DBShouldShowTitleForDisplayIdentifier(NSString *displayIdentifier)
 		if ([UILabel instancesRespondToSelector:@selector(setMarqueeEnabled:)] && [UILabel instancesRespondToSelector:@selector(setMarqueeRunning:)]) {
 			[*_messageLabel setMarqueeEnabled:YES];
 			[*_messageLabel setMarqueeRunning:YES];
+			// Swap classes so that we can determine how long the marquee will take
+			object_setClass(*_messageLabel, [DietBulletinMarqueeLabel class]);
 		}
 		[*_underlayView setHidden:YES];
 	}
