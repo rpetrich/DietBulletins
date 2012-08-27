@@ -306,11 +306,11 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 	__block CGRect mr = [*_messageLabel frame];
 
 	float duration = ((tr.size.width + mr.size.width) / 25);
-	if ((duration - 12)  > 6.5)
+	if ((duration - 10)  > 6.5)
 	{
 		SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
 		[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
-		[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration - 12];
+		[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration - 10];
 	}
 
 	[UIView animateWithDuration:duration
