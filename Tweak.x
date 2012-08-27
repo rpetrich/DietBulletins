@@ -298,6 +298,33 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 	}
 }
 
+%new -(void) scrollStatusBar
+{
+	UILabel **_titleLabel = CHIvarRef(self, _titleLabel, UILabel *);
+	UILabel **_messageLabel = CHIvarRef(self, _messageLabel, UILabel *);
+	__block CGRect tr = [*_titleLabel frame];
+	__block CGRect mr = [*_messageLabel frame];
+
+	float duration = ((tr.size.width + mr.size.width) / 25);
+	if ((duration - 12)  > 6.5)
+	{
+		SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
+		[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
+		[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration - 12];
+	}
+
+	[UIView animateWithDuration:duration
+	delay: 0
+	options: UIViewAnimationOptionCurveLinear 
+	animations: ^{
+		tr.origin.x -= (tr.size.width + mr.size.width);
+		mr.origin.x -= (tr.size.width + mr.size.width);
+		[*_titleLabel setFrame:tr];
+		[*_messageLabel setFrame:mr];
+	}
+	completion: ^(BOOL finished) {}];
+}
+
 - (void)layoutSubviews
 {
 	%orig();
@@ -320,9 +347,11 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 					[*_messageLabel setFrame:(CGRect){ { 24.0f, 1.5f }, { bounds.size.width - 26.0f, 21.0f } }];
 				}
 				[*_underlayView setHidden:YES];
+				DBApplyMarqueeAndExtendedDelay(*_messageLabel);
 				break;
 			}
 			case DBBulletinStyleLargeBanner:
+				DBApplyMarqueeAndExtendedDelay(*_messageLabel);
 				break;
 			case DBBulletinStyleStatusBar: {
 				NSString *sectionID = self.item.seedBulletin.sectionID;
@@ -355,10 +384,35 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 					[*_messageLabel setFrame:(CGRect){ { 22.0f, 0.5f }, { bounds.size.width - 24.0f, 19.0f } }];
 				}
 				[*_underlayView setHidden:YES];
+
+				CGRect mr = [*_messageLabel frame];
+				CGSize msize = [*_messageLabel sizeThatFits:mr.size];
+				if (msize.width > mr.size.width)
+				{
+					CGRect tr = [*_titleLabel frame];
+					CGRect mr = [*_messageLabel frame];
+	
+					UIView* scroll = [[[UIView alloc] initWithFrame:CGRectMake(tr.origin.x, 0, tr.size.width + mr.size.width, bounds.size.height)] autorelease];
+					scroll.clipsToBounds = YES;
+					[self addSubview:scroll];
+	
+					[scroll addSubview:*_titleLabel];
+					[scroll addSubview:*_messageLabel];
+	
+					mr.origin.x -= tr.origin.x;
+					mr.size.width = msize.width;
+					mr.size.height = 19.0f;
+					[*_messageLabel setFrame:mr];
+
+					tr.origin.x = 0;
+					[*_titleLabel setFrame:tr];
+
+					[self performSelector:@selector(scrollStatusBar) withObject:nil afterDelay:1];
+				}
+				
 				break;
 			}
 		}
-		DBApplyMarqueeAndExtendedDelay(*_messageLabel);
 	}
 }
 
