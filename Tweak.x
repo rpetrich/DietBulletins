@@ -280,6 +280,13 @@ __attribute__((visibility("hidden")))
 	return nil;
 }
 
+static BOOL DBShouldHideBiteSMSButton()
+{
+        NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.rpetrich.dietbulletin.plist"];
+        NSNumber* bite = [settings objectForKey:@"DBHideBiteSMSButton"];
+        return bite.boolValue;
+}
+
 static BOOL DBShouldShowTitleForDisplayIdentifier(NSString *displayIdentifier)
 {
 	NSString *key = [NSString stringWithFormat:@"DBShowTitle-%@", displayIdentifier];
@@ -360,6 +367,7 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 					[*_iconView setImage:largerImage];
 				}
 				[*_iconView setFrame:(CGRect){ { 2.0f, 2.0f }, { 16.0f, 16.0f } }];
+
 				[*_titleLabel setFont:[UIFont boldSystemFontOfSize:12]];
 				[*_messageLabel setFont:[UIFont systemFontOfSize:12]];
 				if (DBCurrentStatusBarStyle() != UIStatusBarStyleDefault) {
@@ -413,6 +421,10 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 				break;
 			}
 		}
+
+		// handle biteSMS button
+		UIView* b = [self viewWithTag:844610];
+		b.hidden = DBShouldHideBiteSMSButton();
 	}
 }
 
