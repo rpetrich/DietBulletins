@@ -1,6 +1,7 @@
-#import <UIKit/UIKit.h>
+#import <UIKit/UIKit2.h>
 #import <CaptainHook/CaptainHook.h>
 #import <QuartzCore/QuartzCore.h>
+#import <SpringBoard/SpringBoard.h>
 
 @class BBAction, BBObserver, BBAssertion, BBAttachments, BBSound, BBContent;
 
@@ -106,6 +107,31 @@
 - (CGRect)_currentBannerFrameForOrientation:(UIInterfaceOrientation)orientation;
 @end
 
+@interface SBApplication (iOS5)
+- (UIStatusBarStyle)statusBarStyle;
+@end
+
+@interface UIImage (UIApplicationIconPrivate)
++ (UIImage *)_applicationIconImageForBundleIdentifier:(NSString *)bundleIdentifier format:(int)format scale:(CGFloat)scale;
+@end
+
+typedef enum {
+	DBBulletinStyleSmallBanner = 0,
+	DBBulletinStyleLargeBanner = 1,
+	DBBulletinStyleStatusBar = 2
+} DBBulletinStyle;
+
+static NSDictionary *settings;
+static DBBulletinStyle currentStyle;
+static BOOL enableSmartTitles;
+static BOOL scrollToEnd;
+
+static UIStatusBarStyle DBCurrentStatusBarStyle(void)
+{
+    SBApplication *activeApp = [(SpringBoard *)UIApp _accessibilityFrontMostApplication];
+    return activeApp ? [activeApp statusBarStyle] : [UIApp statusBarStyle];
+}
+
 %config(generator=internal);
 
 %hook SBBulletinBannerController
@@ -113,7 +139,16 @@
 - (CGRect)_currentBannerFrameForOrientation:(UIInterfaceOrientation)orientation
 {
 	CGRect result = %orig();
-	result.size.height -= 18.0f;
+	switch (currentStyle) {
+		case DBBulletinStyleSmallBanner:
+			result.size.height -= 18.0f;
+			break;
+		case DBBulletinStyleLargeBanner:
+			break;
+		case DBBulletinStyleStatusBar:
+			result.size.height -= 20.0f;
+			break;
+	}
 	return result;
 }
 
@@ -123,46 +158,52 @@
 
 - (void)setBannerFrame:(CGRect)frame
 {
-	frame.size.height = 22.0f;
+	switch (currentStyle) {
+		case DBBulletinStyleSmallBanner:
+			frame.size.height = 22.0f;
+			break;
+		case DBBulletinStyleLargeBanner:
+			break;
+		case DBBulletinStyleStatusBar:
+			frame.size.height = 20.0f;
+			break;
+	}
 	%orig();
 }
 
 - (CGRect)_frameForBannerFrame:(CGRect)bannerFrame
 {
 	CGRect result = %orig();
-	result.size.height -= 18.0f;
+	switch (currentStyle) {
+		case DBBulletinStyleSmallBanner:
+			result.size.height -= 18.0f;
+			break;
+		case DBBulletinStyleLargeBanner:
+			break;
+		case DBBulletinStyleStatusBar:
+			result.size.height -= 20.0f;
+			break;
+	}
 	return result;
+}
+
+- (void)setShadowAlpha:(CGFloat)alpha
+{
+	switch (currentStyle) {
+		case DBBulletinStyleSmallBanner:
+			break;
+		case DBBulletinStyleLargeBanner:
+			break;
+		case DBBulletinStyleStatusBar:
+			alpha = 0.0f;
+			break;
+	}
+	%orig();
 }
 
 %end
 
-%hook SBBannerView
-
-- (id)initWithItem:(id)item
-{
-	if ((self = %orig())) {
-		[self setBackgroundColor:[UIColor whiteColor]];
-		CALayer *layer = [self layer];
-		[layer setCornerRadius:3.5f];
-		[layer setContents:(id)[UIImage imageNamed:@"BannerGradientMiddle"].CGImage];
-	}
-	return self;
-}
-
-- (UIImage *)_bannerImageWithAttachmentImage:(UIImage *)attachmentImage
-{
-	return nil;
-}
-
-static BOOL DBShouldShowTitleForDisplayIdentifier(NSString *displayIdentifier)
-{
-	NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.rpetrich.dietbulletin.plist"];
-	NSString *key = [NSString stringWithFormat:@"DBShowTitle-%@", displayIdentifier];
-	id value = [settings objectForKey:key];
-	return !value || [value boolValue];
-}
-
-__attribute__((visibilty("hidden")))
+__attribute__((visibility("hidden")))
 @interface DietBulletinMarqueeLabel : UILabel
 @end
 
@@ -199,6 +240,64 @@ __attribute__((visibilty("hidden")))
 
 @end
 
+%hook SBBannerView
+
+- (id)initWithItem:(id)item
+{
+	if ((self = %orig())) {
+		switch (currentStyle) {
+			case DBBulletinStyleSmallBanner: {
+				[self setBackgroundColor:[UIColor whiteColor]];
+				CALayer *layer = [self layer];
+				[layer setCornerRadius:3.5f];
+				[layer setContents:(id)[UIImage imageNamed:@"BannerGradientMiddle"].CGImage];
+				break;
+			}
+			case DBBulletinStyleLargeBanner:
+				break;
+			case DBBulletinStyleStatusBar: {
+				[self setBackgroundColor:[UIColor blackColor]];
+				CALayer *layer = [self layer];
+				layer.contents = (id)[UIImage kitImageNamed:DBCurrentStatusBarStyle() == UIStatusBarStyleDefault ? @"Silver_Base.png" : @"Black_Base.png"].CGImage;
+				layer.contentsCenter = (CGRect){ { 0.5f, 0.0f }, { 0.0f, 1.0f } };
+				break;
+			}
+		}
+	}
+	return self;
+}
+
+- (UIImage *)_bannerImageWithAttachmentImage:(UIImage *)attachmentImage
+{
+	switch (currentStyle) {
+		case DBBulletinStyleSmallBanner:
+			return nil;
+		case DBBulletinStyleLargeBanner:
+			return %orig();
+		case DBBulletinStyleStatusBar:
+			return nil;
+	}
+	return nil;
+}
+
+static BOOL DBShouldShowTitleForDisplayIdentifier(NSString *displayIdentifier)
+{
+	NSString *key = [NSString stringWithFormat:@"DBShowTitle-%@", displayIdentifier];
+	id value = [settings objectForKey:key];
+	return !value || [value boolValue];
+}
+
+static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
+	if ([UILabel instancesRespondToSelector:@selector(setMarqueeEnabled:)] && [UILabel instancesRespondToSelector:@selector(setMarqueeRunning:)]) {
+		[label setMarqueeEnabled:YES];
+		[label setMarqueeRunning:YES];
+		// Swap classes so that we can determine how long the marquee will take
+		if (scrollToEnd) {
+			object_setClass(label, [DietBulletinMarqueeLabel class]);
+		}
+	}
+}
+
 - (void)layoutSubviews
 {
 	%orig();
@@ -207,24 +306,59 @@ __attribute__((visibilty("hidden")))
 	UILabel **_messageLabel = CHIvarRef(self, _messageLabel, UILabel *);
 	UIView **_underlayView = CHIvarRef(self, _underlayView, UIView *);
 	if (_iconView && _titleLabel && _messageLabel && _underlayView) {
-		[*_iconView setFrame:(CGRect){ { 1.0f, 1.0f }, { 20.0f, 20.0f, } }];
-		CGRect bounds = [self bounds];
-		if (DBShouldShowTitleForDisplayIdentifier(self.item.seedBulletin.sectionID)) {
-			[*_titleLabel setHidden:NO];
-			CGSize firstLabelSize = [*_titleLabel sizeThatFits:bounds.size];
-			[*_titleLabel setFrame:(CGRect){ { 24.0f, 0.0f }, { firstLabelSize.width, 21.0f } }];
-			[*_messageLabel setFrame:(CGRect){ { firstLabelSize.width + 28.0f, 1.5f }, { bounds.size.width - firstLabelSize.width - 30.0f, 21.0f } }];
-		} else {
-			[*_titleLabel setHidden:YES];
-			[*_messageLabel setFrame:(CGRect){ { 24.0f, 1.5f }, { bounds.size.width - 26.0f, 21.0f } }];
+		switch (currentStyle) {
+			case DBBulletinStyleSmallBanner: {
+				[*_iconView setFrame:(CGRect){ { 1.0f, 1.0f }, { 20.0f, 20.0f } }];
+				CGRect bounds = [self bounds];
+				if (DBShouldShowTitleForDisplayIdentifier(self.item.seedBulletin.sectionID)) {
+					[*_titleLabel setHidden:NO];
+					CGSize firstLabelSize = [*_titleLabel sizeThatFits:bounds.size];
+					[*_titleLabel setFrame:(CGRect){ { 24.0f, 0.0f }, { firstLabelSize.width, 21.0f } }];
+					[*_messageLabel setFrame:(CGRect){ { firstLabelSize.width + 28.0f, 1.5f }, { bounds.size.width - firstLabelSize.width - 30.0f, 21.0f } }];
+				} else {
+					[*_titleLabel setHidden:YES];
+					[*_messageLabel setFrame:(CGRect){ { 24.0f, 1.5f }, { bounds.size.width - 26.0f, 21.0f } }];
+				}
+				[*_underlayView setHidden:YES];
+				break;
+			}
+			case DBBulletinStyleLargeBanner:
+				break;
+			case DBBulletinStyleStatusBar: {
+				NSString *sectionID = self.item.seedBulletin.sectionID;
+				UIImage *largerImage = [UIImage _applicationIconImageForBundleIdentifier:sectionID format:0 scale:2.0];
+				if (largerImage) {
+					[*_iconView setImage:largerImage];
+				}
+				[*_iconView setFrame:(CGRect){ { 2.0f, 2.0f }, { 16.0f, 16.0f } }];
+				[*_titleLabel setFont:[UIFont boldSystemFontOfSize:12]];
+				[*_messageLabel setFont:[UIFont systemFontOfSize:12]];
+				if (DBCurrentStatusBarStyle() != UIStatusBarStyleDefault) {
+					UIColor *white = [UIColor whiteColor];
+					[*_titleLabel setTextColor:white];
+					[*_messageLabel setTextColor:white];
+				} else {
+					UIColor *shadowColor = [UIColor colorWithWhite:1.0f alpha:0.5f];
+					[*_titleLabel setShadowColor:shadowColor];
+					[*_titleLabel setShadowOffset:(CGSize){ 0.0f, 1.0f }];
+					[*_messageLabel setShadowColor:shadowColor];
+					[*_messageLabel setShadowOffset:(CGSize){ 0.0f, 1.0f }];
+				}
+				CGRect bounds = [self bounds];
+				if (DBShouldShowTitleForDisplayIdentifier(sectionID)) {
+					[*_titleLabel setHidden:NO];
+					CGSize firstLabelSize = [*_titleLabel sizeThatFits:bounds.size];
+					[*_titleLabel setFrame:(CGRect){ { 22.0f, 0.5f }, { firstLabelSize.width, 19.0f } }];
+					[*_messageLabel setFrame:(CGRect){ { firstLabelSize.width + 26.0f, 0.5f }, { bounds.size.width - firstLabelSize.width - 28.0f, 19.0f } }];
+				} else {
+					[*_titleLabel setHidden:YES];
+					[*_messageLabel setFrame:(CGRect){ { 22.0f, 0.5f }, { bounds.size.width - 24.0f, 19.0f } }];
+				}
+				[*_underlayView setHidden:YES];
+				break;
+			}
 		}
-		if ([UILabel instancesRespondToSelector:@selector(setMarqueeEnabled:)] && [UILabel instancesRespondToSelector:@selector(setMarqueeRunning:)]) {
-			[*_messageLabel setMarqueeEnabled:YES];
-			[*_messageLabel setMarqueeRunning:YES];
-			// Swap classes so that we can determine how long the marquee will take
-			object_setClass(*_messageLabel, [DietBulletinMarqueeLabel class]);
-		}
-		[*_underlayView setHidden:YES];
+		DBApplyMarqueeAndExtendedDelay(*_messageLabel);
 	}
 }
 
@@ -243,6 +377,9 @@ typedef DBTextRanges (^DBTextExtractor)(NSString *message);
 
 - (NSString *)title
 {
+	if (!enableSmartTitles) {
+		return %orig();
+	}
 	NSString *displayIdentifier = self.seedBulletin.sectionID;
 	DBTextExtractor extractor = (DBTextExtractor)[textExtractors objectForKey:displayIdentifier];
 	if (extractor) {
@@ -261,7 +398,7 @@ typedef DBTextRanges (^DBTextExtractor)(NSString *message);
 
 - (NSString *)message
 {
-	if (suppressMessageOverride) {
+	if (suppressMessageOverride || !enableSmartTitles) {
 		return %orig();
 	}
 	NSString *displayIdentifier = self.seedBulletin.sectionID;
@@ -327,10 +464,24 @@ static inline DBTextRanges DBTextExtractLeadingCapitals(NSString *message)
 	return DBTextExtractUnchanged(message);
 }
 
+static void LoadSettings(void)
+{
+	[settings release];
+	settings = [[NSDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/com.rpetrich.dietbulletin.plist"];
+	id temp;
+	currentStyle = [[settings objectForKey:@"DBBulletinStyle"] intValue];
+	temp = [settings objectForKey:@"DBEnableSmartTitles"];
+	enableSmartTitles = temp ? [temp boolValue] : YES;
+	temp = [settings objectForKey:@"DBScrollToEnd"];
+	scrollToEnd = temp ? [temp boolValue] : YES;
+}
+
 %ctor {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 	%init();
 	textExtractors = [[NSMutableDictionary alloc] init];
+	LoadSettings();
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (void *)LoadSettings, CFSTR("com.rpetrich.dietbulletin.settingschanged"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 	// Tweetbot
 	DBRegisterTextExtractor(@"com.tapbots.Tweetbot", ^(NSString *message){
 		return DBTextExtractSplitAround(message, 0, 0, @" ", 1, 0);
