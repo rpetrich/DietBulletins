@@ -258,8 +258,10 @@ __attribute__((visibility("hidden")))
 			case DBBulletinStyleStatusBar: {
 				[self setBackgroundColor:[UIColor blackColor]];
 				CALayer *layer = [self layer];
-				layer.contents = (id)[UIImage kitImageNamed:DBCurrentStatusBarStyle() == UIStatusBarStyleDefault ? @"Silver_Base.png" : @"Black_Base.png"].CGImage;
+				UIImage *image = [UIImage kitImageNamed:DBCurrentStatusBarStyle() == UIStatusBarStyleDefault ? @"Silver_Base.png" : @"Black_Base.png"];
+				layer.contents = (id)image.CGImage;
 				layer.contentsCenter = (CGRect){ { 0.5f, 0.0f }, { 0.0f, 1.0f } };
+				layer.contentsScale = image.scale;
 				break;
 			}
 		}
