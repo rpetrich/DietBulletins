@@ -305,6 +305,26 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 	}
 }
 
+%new(v:@) -(void) scrollStatusBar:(UIScrollView*) scroll
+{
+	float scrollDistance = scroll.contentSize.width - scroll.frame.size.width;
+	float duration = (scrollDistance / 25);
+	if ((duration + 0.3)  > 6.5)
+	{
+		SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
+		[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
+		[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration + 0.3];
+	}
+
+	[UIView animateWithDuration:duration
+	delay: 0
+	options: UIViewAnimationOptionCurveEaseOut
+	animations: ^{
+		[scroll setContentOffset:CGPointMake(scrollDistance, 0) animated:NO];
+	}
+	completion: ^(BOOL finished) {}];
+}
+
 %new -(void) scrollStatusBar
 {
 	UILabel **_titleLabel = CHIvarRef(self, _titleLabel, UILabel *);
@@ -400,7 +420,7 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 					CGRect tr = [*_titleLabel frame];
 					CGRect mr = [*_messageLabel frame];
 	
-					UIView* scroll = [[[UIView alloc] initWithFrame:CGRectMake(tr.origin.x, 0, tr.size.width + mr.size.width, bounds.size.height)] autorelease];
+					UIScrollView* scroll = [[[UIScrollView alloc] initWithFrame:CGRectMake(tr.origin.x, 0, tr.size.width + mr.size.width, bounds.size.height)] autorelease];
 					scroll.clipsToBounds = YES;
 					[self addSubview:scroll];
 	
@@ -415,7 +435,9 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 					tr.origin.x = 0;
 					[*_titleLabel setFrame:tr];
 
-					[self performSelector:@selector(scrollStatusBar) withObject:nil afterDelay:1];
+					scroll.contentSize = CGSizeMake(mr.origin.x + mr.size.width, scroll.frame.size.height);
+
+					[self performSelector:@selector(scrollStatusBar:) withObject:scroll afterDelay:1];
 				}
 				
 				break;
