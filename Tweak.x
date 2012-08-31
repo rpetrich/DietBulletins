@@ -318,36 +318,9 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 
 	[UIView animateWithDuration:duration
 	delay: 0
-	options: UIViewAnimationOptionCurveEaseOut
+	options: UIViewAnimationOptionCurveLinear
 	animations: ^{
 		[scroll setContentOffset:CGPointMake(scrollDistance, 0) animated:NO];
-	}
-	completion: ^(BOOL finished) {}];
-}
-
-%new -(void) scrollStatusBar
-{
-	UILabel **_titleLabel = CHIvarRef(self, _titleLabel, UILabel *);
-	UILabel **_messageLabel = CHIvarRef(self, _messageLabel, UILabel *);
-	__block CGRect tr = [*_titleLabel frame];
-	__block CGRect mr = [*_messageLabel frame];
-
-	float duration = ((tr.size.width + mr.size.width) / 25);
-	if ((duration - 10)  > 6.5)
-	{
-		SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
-		[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
-		[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration - 10];
-	}
-
-	[UIView animateWithDuration:duration
-	delay: 0
-	options: UIViewAnimationOptionCurveLinear 
-	animations: ^{
-		tr.origin.x -= (tr.size.width + mr.size.width);
-		mr.origin.x -= (tr.size.width + mr.size.width);
-		[*_titleLabel setFrame:tr];
-		[*_messageLabel setFrame:mr];
 	}
 	completion: ^(BOOL finished) {}];
 }
