@@ -280,13 +280,6 @@ __attribute__((visibility("hidden")))
 	return nil;
 }
 
-static BOOL DBShouldHideBiteSMSButton()
-{
-        NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.rpetrich.dietbulletin.plist"];
-        NSNumber* bite = [settings objectForKey:@"DBHideBiteSMSButton"];
-        return bite.boolValue;
-}
-
 static BOOL DBShouldShowTitleForDisplayIdentifier(NSString *displayIdentifier)
 {
 	NSString *key = [NSString stringWithFormat:@"DBShowTitle-%@", displayIdentifier];
@@ -303,26 +296,6 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 			object_setClass(label, [DietBulletinMarqueeLabel class]);
 		}
 	}
-}
-
-%new(v:@) -(void) scrollStatusBar:(UIScrollView*) scroll
-{
-	float scrollDistance = scroll.contentSize.width - scroll.frame.size.width;
-	float duration = (scrollDistance / 25);
-	if ((duration + 0.3)  > 6.5)
-	{
-		SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
-		[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
-		[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration + 0.3];
-	}
-
-	[UIView animateWithDuration:duration
-	delay: 0
-	options: UIViewAnimationOptionCurveLinear
-	animations: ^{
-		[scroll setContentOffset:CGPointMake(scrollDistance, 0) animated:NO];
-	}
-	completion: ^(BOOL finished) {}];
 }
 
 - (void)layoutSubviews
@@ -395,6 +368,7 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 	
 					UIScrollView* scroll = [[[UIScrollView alloc] initWithFrame:CGRectMake(tr.origin.x, 0, tr.size.width + mr.size.width, bounds.size.height)] autorelease];
 					scroll.clipsToBounds = YES;
+					scroll.showsHorizontalScrollIndicator = NO;
 					[self addSubview:scroll];
 	
 					[scroll addSubview:*_titleLabel];
@@ -410,16 +384,36 @@ static inline void DBApplyMarqueeAndExtendedDelay(UILabel *label) {
 
 					scroll.contentSize = CGSizeMake(mr.origin.x + mr.size.width, scroll.frame.size.height);
 
-					[self performSelector:@selector(scrollStatusBar:) withObject:scroll afterDelay:1];
+					dispatch_after(
+						dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC),
+						dispatch_get_main_queue(), 
+						^ {
+							float scrollDistance = scroll.contentSize.width - scroll.frame.size.width;
+							float duration = (scrollDistance / 25);
+							if ((duration + 0.5)  > 6.5)
+							{
+								SBBulletinBannerController *bc = [%c(SBBulletinBannerController) sharedInstance];
+								[NSObject cancelPreviousPerformRequestsWithTarget:bc selector:@selector(_dismissIntervalElapsed) object:nil];
+								[bc performSelector:@selector(_dismissIntervalElapsed) withObject:nil afterDelay:duration + 0.5];
+							}
+
+							[UIView animateWithDuration:duration
+							delay: 0
+							options: UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowUserInteraction
+							animations: ^{
+								[scroll setContentOffset:CGPointMake(scrollDistance, 0) animated:NO];
+							}
+							completion: ^(BOOL finished) {}];
+						});
 				}
+
+				// handle biteSMS button
+				UIView* b = [self viewWithTag:844610];
+				b.hidden = YES;
 				
 				break;
 			}
 		}
-
-		// handle biteSMS button
-		UIView* b = [self viewWithTag:844610];
-		b.hidden = DBShouldHideBiteSMSButton();
 	}
 }
 

@@ -87,13 +87,6 @@ items = (
     footerText = "Wait until message scrolls to the end before auto-dismissing";
   },
   {
-        cell = PSSwitchCell;
-        label = "Hide BiteSMS Button";
-        key = "DBHideBiteSMSButton";
-        default = false;
-        defaults = "com.rpetrich.dietbulletin";
-  },
-  {
     cell = PSGroupCell;
     footerText = "© 2012 Ryan Petrich";
   }
