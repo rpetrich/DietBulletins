@@ -128,11 +128,16 @@ static BOOL scrollToEnd;
 
 static UIStatusBarStyle DBCurrentStatusBarStyle(void)
 {
+    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad)
+    	return UIStatusBarStyleBlackOpaque;
+
     SBApplication *activeApp = [(SpringBoard *)UIApp _accessibilityFrontMostApplication];
     return activeApp ? [activeApp statusBarStyle] : [UIApp statusBarStyle];
 }
 
 %config(generator=internal);
+
+#define DBBannerWidthForOrientation(orient) (UIDeviceOrientationIsLandscape(orient)||UIInterfaceOrientationIsLandscape(orient)?[[UIScreen mainScreen]bounds].size.height:[[UIScreen mainScreen]bounds].size.width)
 
 %hook SBBulletinBannerController
 
@@ -147,6 +152,8 @@ static UIStatusBarStyle DBCurrentStatusBarStyle(void)
 			break;
 		case DBBulletinStyleStatusBar:
 			result.size.height -= 20.0f;
+			result.origin.x=0;
+			result.size.width=DBBannerWidthForOrientation(orientation);
 			break;
 	}
 	return result;
