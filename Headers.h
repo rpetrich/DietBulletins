@@ -104,6 +104,7 @@
 @interface SBBulletinBannerController : NSObject
 + (SBBulletinBannerController *)sharedInstance;
 - (CGRect)_currentBannerFrameForOrientation:(UIInterfaceOrientation)orientation;
+- (void)observer:(id)observer addBulletin:(BBBulletin *)bulletin forFeed:(NSInteger)feed;
 @end
 
 @interface SBApplication (iOS5)
@@ -112,4 +113,11 @@
 
 @interface UIImage (UIApplicationIconPrivate)
 + (UIImage *)_applicationIconImageForBundleIdentifier:(NSString *)bundleIdentifier format:(int)format scale:(CGFloat)scale;
+@end
+
+@interface BBBulletinRequest : BBBulletin
+@end
+
+@interface BBAction : NSObject
++ (BBAction *)actionWithLaunchURL:(NSURL *)url callblock:(id)block;
 @end

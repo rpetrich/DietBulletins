@@ -419,6 +419,25 @@ static inline DBTextRanges DBTextExtractLeadingCapitals(NSString *message)
 	return DBTextExtractUnchanged(message);
 }
 
+#ifdef DEBUG
+
+@implementation NSObject (DietBulletin)
+
++ (BBBulletinRequest *)testBulletin
+{
+	BBBulletinRequest *br = [[%c(BBBulletinRequest) alloc] init];
+	br.title = @"Tweetbot";
+	br.message = @"@Stimpy5050 sent @rpetrich a message: I was thinking about making it line up just with the status bar and match the style (black vs silver, etc).";
+	br.sectionID = @"com.tapbots.Tweetbot";
+	br.defaultAction = [%c(BBAction) actionWithLaunchURL:[NSURL URLWithString:@"http://www.google.com/"] callblock:nil];
+	[[%c(SBBulletinBannerController) sharedInstance] observer:nil addBulletin:br forFeed:2];
+	return [br autorelease];
+}
+
+@end
+
+#endif
+
 static void LoadSettings(void)
 {
 	[settings release];
