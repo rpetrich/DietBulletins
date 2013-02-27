@@ -514,5 +514,9 @@ static void LoadSettings(void)
 	DBRegisterTextExtractor(@"com.quora.app.mobile", ^(NSString *message){
 		return DBTextExtractLeadingCapitals(message);
 	});
+	// Mailbox
+	DBRegisterTextExtractor(@"com.orchestra.v2", ^(NSString *message) {
+		return DBTextExtractSplitAround(message, 0, 0, @":\n", 2, 0);
+	});
 	[pool drain];
 }
