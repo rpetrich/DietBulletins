@@ -232,9 +232,10 @@ static inline void DBUpdateContainerView(SBBannerView *bannerView)
 {
 	if (kCFCoreFoundationVersionNumber >= 793.0) {
 		NSArray *subviews = bannerView.subviews;
-		UIView *shadowView = [subviews objectAtIndex:1];
+		NSInteger offset = [subviews count] > 2 ? 1 : 0;
+		UIView *shadowView = [subviews objectAtIndex:offset];
 		shadowView.hidden = YES;
-		UIView *containerView = [subviews objectAtIndex:2];
+		UIView *containerView = [subviews objectAtIndex:offset+1];
 		containerView.frame = bannerView.bounds;
 	}
 }
