@@ -84,6 +84,6 @@ items = (
   },
   {
     cell = PSGroupCell;
-    footerText = "© 2012 Ryan Petrich";
+    footerText = "© 2012-2013 Ryan Petrich";
   }
 );
