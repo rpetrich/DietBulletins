@@ -46,40 +46,89 @@ static UIStatusBarStyle DBCurrentStatusBarStyle(void)
 
 %end
 
+static SBBannerAndShadowView *pendingBannerAndShadowView;
+static NSInteger insideIncompatibleFlipTransition;
+
+static bool isCompatibleSBBannerAndShadowView(SBBannerAndShadowView *self)
+{
+	if (insideIncompatibleFlipTransition)
+		return false;
+	UIView **_banner = CHIvarRef(self, _banner, UIView *);
+	if (!_banner)
+		return true;
+	if (!*_banner)
+		return true;
+	if ([*_banner isKindOfClass:%c(SBBulletinBannerView)])
+		return true;
+	return false;
+}
+
 // iOS 6.0
 %hook SBBannerController
 
 - (CGRect)_normalBannerFrameForOrientation:(UIInterfaceOrientation)orientation
 {
 	CGRect result = %orig();
-	switch (currentStyle) {
-		case DBBulletinStyleSmallBanner:
-			result.size.height -= 18.0f;
-			break;
-		case DBBulletinStyleLargeBanner:
-			break;
-		case DBBulletinStyleStatusBar:
-			result.size.height -= 20.0f;
-			break;
+	SBBannerAndShadowView **_bannerAndShadowView = CHIvarRef(self, _bannerAndShadowView, SBBannerAndShadowView *);
+	if (isCompatibleSBBannerAndShadowView(_bannerAndShadowView && *_bannerAndShadowView ? *_bannerAndShadowView : pendingBannerAndShadowView)) {
+		switch (currentStyle) {
+			case DBBulletinStyleSmallBanner:
+				result.size.height -= 18.0f;
+				break;
+			case DBBulletinStyleLargeBanner:
+				break;
+			case DBBulletinStyleStatusBar:
+				result.size.height -= 20.0f;
+				break;
+		}
 	}
 	return result;
+}
+
+- (void)_flipWithContext:(SBBannerTransitionContext *)context
+{
+	UIView *toView = context.toView;
+	if (toView && ![toView isKindOfClass:%c(SBBulletinBannerView)]) {
+		insideIncompatibleFlipTransition++;
+		%orig();
+		insideIncompatibleFlipTransition--;
+	} else {
+		%orig();
+	}
 }
 
 %end
 
 %hook SBBannerAndShadowView
 
+- (id)initWithBanner:(UIView *)banner
+{
+	if ((self = %orig())) {
+		pendingBannerAndShadowView = self;
+	}
+	return self;
+}
+
+- (void)dealloc
+{
+	if (pendingBannerAndShadowView == self)
+		pendingBannerAndShadowView = nil;
+	%orig();
+}
+
 - (void)setBannerFrame:(CGRect)frame
 {
-	switch (currentStyle) {
-		case DBBulletinStyleSmallBanner:
-			frame.size.height = 22.0f;
-			break;
-		case DBBulletinStyleLargeBanner:
-			break;
-		case DBBulletinStyleStatusBar:
-			frame.size.height = 20.0f;
-			break;
+	if (isCompatibleSBBannerAndShadowView(self)) {
+		switch (currentStyle) {
+			case DBBulletinStyleSmallBanner:
+				frame.size.height = 22.0f;
+				break;
+			case DBBulletinStyleLargeBanner:
+				break;
+			case DBBulletinStyleStatusBar:
+				frame.size.height = 20.0f;
+				break;
+		}
 	}
 	%orig();
 }
@@ -87,15 +136,17 @@ static UIStatusBarStyle DBCurrentStatusBarStyle(void)
 - (CGRect)_frameForBannerFrame:(CGRect)bannerFrame
 {
 	CGRect result = %orig();
-	switch (currentStyle) {
-		case DBBulletinStyleSmallBanner:
-			result.size.height -= 18.0f;
-			break;
-		case DBBulletinStyleLargeBanner:
-			break;
-		case DBBulletinStyleStatusBar:
-			result.size.height -= 20.0f;
-			break;
+	if (isCompatibleSBBannerAndShadowView(self)) {
+		switch (currentStyle) {
+			case DBBulletinStyleSmallBanner:
+				result.size.height -= 18.0f;
+				break;
+			case DBBulletinStyleLargeBanner:
+				break;
+			case DBBulletinStyleStatusBar:
+				result.size.height -= 20.0f;
+				break;
+		}
 	}
 	return result;
 }

@@ -121,3 +121,17 @@
 @interface BBAction : NSObject
 + (BBAction *)actionWithLaunchURL:(NSURL *)url callblock:(id)block;
 @end
+
+@protocol SBUIBannerItemView;
+@interface SBBannerTransitionContext : NSObject {
+	UIView<SBUIBannerItemView>* _fromView;
+	UIView<SBUIBannerItemView>* _toView;
+	int dismissReason;
+	int animation;
+}
+@property(assign, nonatomic) int animation;
+@property(assign, nonatomic) int dismissReason;
+@property(retain, nonatomic) UIView<SBUIBannerItemView>* toView;
+@property(retain, nonatomic) UIView<SBUIBannerItemView>* fromView;
++ (id)contextFromView:(UIView<SBUIBannerItemView>*)fromView toView:(UIView<SBUIBannerItemView>*)toView;
+@end
