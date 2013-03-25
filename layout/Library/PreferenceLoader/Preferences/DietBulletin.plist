@@ -1,5 +1,5 @@
 entry = {
-  icon = "/Applications/Preferences.app/notifications_icon.png";
+  icon = "DietBulletin.png";
   label = DietBulletin;
   cell = PSLinkCell;
 };
