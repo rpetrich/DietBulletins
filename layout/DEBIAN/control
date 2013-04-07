@@ -3,7 +3,7 @@ Priority: optional
 Section: Tweaks
 Architecture: iphoneos-arm
 Version: 1.0.1
-Description: Skinny bulletins!
+Description: Skinny notification center bulletins!
 Name: DietBulletin
 Depends: firmware (>= 4.0), mobilesubstrate, preferenceloader, applist (>= 1.4.3)
 Author: Ryan Petrich
