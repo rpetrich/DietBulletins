@@ -3,6 +3,7 @@
 #import <QuartzCore/QuartzCore.h>
 
 #import "Headers.h"
+#import "DietBulletin.h"
 
 typedef enum {
 	DBBulletinStyleSmallBanner = 0,
@@ -14,6 +15,7 @@ static NSDictionary *settings;
 static DBBulletinStyle currentStyle;
 static BOOL enableSmartTitles;
 static BOOL scrollToEnd;
+static NSInteger suppressed;
 
 static UIStatusBarStyle DBCurrentStatusBarStyle(void)
 {
@@ -25,13 +27,32 @@ static UIStatusBarStyle DBCurrentStatusBarStyle(void)
 
 %config(generator=internal);
 
+@implementation NSObject (DietBulletin)
+
++ (void)suppressDietBulletin
+{
+	suppressed++;
+}
+
++ (void)unsuppressDietBulletin
+{
+	suppressed--;
+}
+
+@end
+
+static DBBulletinStyle resolveStyle(void)
+{
+	return suppressed ? DBBulletinStyleLargeBanner : currentStyle;
+}
+
 // iOS 5.x
 %hook SBBulletinBannerController
 
 - (CGRect)_currentBannerFrameForOrientation:(UIInterfaceOrientation)orientation
 {
 	CGRect result = %orig();
-	switch (currentStyle) {
+	switch (resolveStyle()) {
 		case DBBulletinStyleSmallBanner:
 			result.size.height -= 18.0f;
 			break;
@@ -71,7 +92,7 @@ static bool isCompatibleSBBannerAndShadowView(SBBannerAndShadowView *self)
 	CGRect result = %orig();
 	SBBannerAndShadowView **_bannerAndShadowView = CHIvarRef(self, _bannerAndShadowView, SBBannerAndShadowView *);
 	if (isCompatibleSBBannerAndShadowView(_bannerAndShadowView && *_bannerAndShadowView ? *_bannerAndShadowView : pendingBannerAndShadowView)) {
-		switch (currentStyle) {
+		switch (resolveStyle()) {
 			case DBBulletinStyleSmallBanner:
 				result.size.height -= 18.0f;
 				break;
@@ -119,7 +140,7 @@ static bool isCompatibleSBBannerAndShadowView(SBBannerAndShadowView *self)
 - (void)setBannerFrame:(CGRect)frame
 {
 	if (isCompatibleSBBannerAndShadowView(self)) {
-		switch (currentStyle) {
+		switch (resolveStyle()) {
 			case DBBulletinStyleSmallBanner:
 				frame.size.height = 22.0f;
 				break;
@@ -137,7 +158,7 @@ static bool isCompatibleSBBannerAndShadowView(SBBannerAndShadowView *self)
 {
 	CGRect result = %orig();
 	if (isCompatibleSBBannerAndShadowView(self)) {
-		switch (currentStyle) {
+		switch (resolveStyle()) {
 			case DBBulletinStyleSmallBanner:
 				result.size.height -= 18.0f;
 				break;
@@ -153,7 +174,7 @@ static bool isCompatibleSBBannerAndShadowView(SBBannerAndShadowView *self)
 
 - (void)setShadowAlpha:(CGFloat)alpha
 {
-	switch (currentStyle) {
+	switch (resolveStyle()) {
 		case DBBulletinStyleSmallBanner:
 			break;
 		case DBBulletinStyleLargeBanner:
@@ -209,7 +230,7 @@ __attribute__((visibility("hidden")))
 - (id)initWithItem:(id)item
 {
 	if ((self = %orig())) {
-		switch (currentStyle) {
+		switch (resolveStyle()) {
 			case DBBulletinStyleSmallBanner: {
 				[self setBackgroundColor:[UIColor whiteColor]];
 				CALayer *layer = [self layer];
@@ -236,7 +257,7 @@ __attribute__((visibility("hidden")))
 // iOS 5.x
 - (UIImage *)_bannerImageWithAttachmentImage:(UIImage *)attachmentImage
 {
-	switch (currentStyle) {
+	switch (resolveStyle()) {
 		case DBBulletinStyleSmallBanner:
 			return nil;
 		case DBBulletinStyleLargeBanner:
@@ -250,7 +271,7 @@ __attribute__((visibility("hidden")))
 // iOS 6.x
 - (UIImage *)_backgroundImageWithAttachmentImage:(UIImage *)attachmentImage
 {
-	switch (currentStyle) {
+	switch (resolveStyle()) {
 		case DBBulletinStyleSmallBanner:
 			return nil;
 		case DBBulletinStyleLargeBanner:
@@ -311,7 +332,7 @@ static inline CGRect DBRoundedRect(CGFloat x, CGFloat y, CGFloat width, CGFloat 
 	UILabel **_messageLabel = CHIvarRef(self, _messageLabel, UILabel *);
 	UIView **_underlayView = CHIvarRef(self, _underlayView, UIView *);
 	if (_item && _iconView && _titleLabel && _messageLabel && _underlayView) {
-		switch (currentStyle) {
+		switch (resolveStyle()) {
 			case DBBulletinStyleSmallBanner: {
 				DBUpdateContainerView(self);
 				[*_iconView setFrame:(CGRect){ { 1.0f, 1.0f }, { 20.0f, 20.0f } }];
@@ -365,7 +386,9 @@ static inline CGRect DBRoundedRect(CGFloat x, CGFloat y, CGFloat width, CGFloat 
 				break;
 			}
 		}
-		DBApplyMarqueeAndExtendedDelay(*_messageLabel);
+		if (!suppressed) {
+			DBApplyMarqueeAndExtendedDelay(*_messageLabel);
+		}
 	}
 }
 
@@ -384,7 +407,7 @@ typedef DBTextRanges (^DBTextExtractor)(NSString *message);
 
 - (NSString *)title
 {
-	if (!enableSmartTitles) {
+	if (suppressed || !enableSmartTitles) {
 		return %orig();
 	}
 	NSString *displayIdentifier = self.seedBulletin.sectionID;
@@ -405,7 +428,7 @@ typedef DBTextRanges (^DBTextExtractor)(NSString *message);
 
 - (NSString *)message
 {
-	if (suppressMessageOverride || !enableSmartTitles) {
+	if (suppressed || suppressMessageOverride || !enableSmartTitles) {
 		return %orig();
 	}
 	NSString *displayIdentifier = self.seedBulletin.sectionID;
