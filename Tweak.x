@@ -533,7 +533,10 @@ static void LoadSettings(void)
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (void *)LoadSettings, CFSTR("com.rpetrich.dietbulletin.settingschanged"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 	// Tweetbot
 	DBRegisterTextExtractor(@"com.tapbots.Tweetbot", ^(NSString *message){
-		return DBTextExtractSplitAround(message, 0, 0, @" ", 1, 0);
+		return DBTextExtractSplitAround(message, 0, 0, @": ", 2, 0);
+	});
+	DBRegisterTextExtractor(@"com.tapbots.TweetbotPad", ^(NSString *message){
+		return DBTextExtractSplitAround(message, 0, 0, @": ", 2, 0);
 	});
 	// Instagram
 	DBRegisterTextExtractor(@"com.burbn.instagram", ^(NSString *message){
